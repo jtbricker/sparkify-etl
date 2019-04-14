@@ -6,6 +6,7 @@ extract data from log files, transform the data to match required formats,
 and load the transformed data into postgres database tables to allow for
 efficient data analysis by the music startup, Sparkify.
 
+### Busines Value
 Sparkify expects to write queries against this database to gain insights
 into the behavior and trends of its users in order to better serve them 
 in the future.
@@ -40,6 +41,11 @@ The ETL pipeline works in 3 steps:
 1. Transform- The required data is pulled out of the dataframes and formatted as required by the database.  In addition, any additional required data is pulled in from external sources.
 1. Load - The formatted data is inserted into their destination tables
 
+### ETL Notes
+The song/artist data and the songplay data (which references songs/artists) were loaded from different data sources (`data/song_data` and `data/log_data`, respectively). These example data sources are just examples and therefore not all songs/artists referenced in the songplays logs are represented.
+
+Therefore, when a song/artist combination were not found in the data, new rows in these tables were added to make the data as complete as possible.
+
 ## Example Queries
 
 Question: How many users are listening to the Backstreet Boys on Thursdays?
@@ -48,7 +54,7 @@ Question: How many users are listening to the Backstreet Boys on Thursdays?
 SELECT COUNT(*) 
 FROM songplays sp
 JOIN artists a on sp.artist_id = a.artist_id
-JOIN time t on sp.start_time = t.timestamp
+JOIN time t on sp.start_time = t.start_time
 WHERE a.name = 'Backstreet Boys' AND  t.weekday = 3
 ```
 

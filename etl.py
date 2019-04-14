@@ -1,24 +1,40 @@
 import os
 import glob
+import uuid
 import psycopg2
 import pandas as pd
 from sql_queries import *
 from datetime import datetime
 
 def process_song_file(cur, filepath):
+    """Read in the data from a single song data file and insert the
+    relevant data into the song and artists tables.
+
+    Arguments:
+        cur {cursor} -- psycopg2 object that allows for interactions with the DB
+        filepath {str} -- file location
+    """
+
     # open song file
     df = pd.read_json(filepath, lines=True)
 
-    # insert song record
-    song_data = list(df[['song_id','title','artist_id', 'year', 'duration']].values[0])
-    cur.execute(song_table_insert, song_data)
-    
     # insert artist record
     artist_data = list(df[['artist_id', 'artist_name', 'artist_location', 'artist_latitude', 'artist_longitude']].values[0])
     cur.execute(artist_table_insert, artist_data)
 
+    # insert song record
+    song_data = list(df[['song_id','title','artist_id', 'year', 'duration']].values[0])
+    cur.execute(song_table_insert, song_data)
 
 def process_log_file(cur, filepath):
+    """Read in the data from a single log data file and insert the relevant data into the time, 
+    users, songs, artists and songplays tables.
+
+    Arguments:
+        cur {cursor} -- psycopg2 object that allows for interactions with the DB
+        filepath {str} -- file location
+    """
+
     # open log file
     df = pd.read_json(filepath, lines=True)
 
@@ -45,7 +61,6 @@ def process_log_file(cur, filepath):
 
     # insert songplay records
     for index, row in df.iterrows():
-        
         # get songid and artistid from song and artist tables
         cur.execute(song_select, (row.song, row.artist, row.length))
         results = cur.fetchone()
@@ -53,7 +68,11 @@ def process_log_file(cur, filepath):
         if results:
             songid, artistid = results
         else:
-            songid, artistid = None, None
+            # If artist and song id not in tables, add them
+            artistid = uuid.uuid4().hex[:18].upper()
+            songid = uuid.uuid4().hex[:18].upper()
+            cur.execute(artist_table_insert, (artistid, row.artist, None, None, None))
+            cur.execute(song_table_insert, (songid, row.song, artistid, None, row.length))
 
         # insert songplay record
         songplay_data = songplay_data = (datetime.fromtimestamp(row.ts/1000), \
@@ -63,6 +82,16 @@ def process_log_file(cur, filepath):
 
 
 def process_data(cur, conn, filepath, func):
+    """Parses a given directory for data files and uses the provided function to extract
+    the data and insert it into an appropriate database table
+    
+    Arguments:
+        cur {cursor} -- psycopg2 object representing connection to PostgreSQL DB
+        conn {connection} -- psycopg2 object that allows for interactions with the DB
+        filepath {str} -- file location
+        func {function(cursor, filepath)} -- A function extracts the data from a given filepath,
+        tranforms the data into an apropriate format and uses the cursor to insert the data into a db table
+    """
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -82,6 +111,8 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
+    """ Extracts the song and log data and insert data into the relevant tables
+    """
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 
