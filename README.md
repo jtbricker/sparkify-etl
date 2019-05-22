@@ -6,7 +6,7 @@ extract data from log files, transform the data to match required formats,
 and load the transformed data into postgres database tables to allow for
 efficient data analysis by the music startup, Sparkify.
 
-### Busines Value
+### Business Value
 Sparkify expects to write queries against this database to gain insights
 into the behavior and trends of its users in order to better serve them 
 in the future.
